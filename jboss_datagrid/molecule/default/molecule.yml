@@ -1,0 +1,58 @@
+---
+dependency:
+  name: galaxy
+  options:
+    role-file: tests/requirements.yml
+    force: true
+driver:
+  name: docker
+platforms:
+  - name: centos-systemd
+    image: centos/systemd:latest
+    pre_build_image: true
+    privileged: True
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    port_bindings:
+      - 11222:11222
+      - 11221:11221
+      - 7800:7800
+      - 54334:54334
+      - 46655:46555
+    published_ports:
+      - 0.0.0.0:11222:11222/TCP
+      - 0.0.0.0:11221:11221/TCP
+      - 0.0.0.0:7800:7800/TCP
+      - 0.0.0.0:54334:54334/TCP
+      - 0.0.0.0:46655:46655/UDP
+    command: "/usr/sbin/init"
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        transfer_method: csp-to-host
+        rhn_username: ${RHN_USERNAME}
+        rhn_password: ${RHN_PASSWORD}
+        amq_broker_name: broker-master
+lint: |
+  set -e
+  yamllint .
+  ansible-lint -x 105 --exclude tasks/rhn_url.yml
+  flake8
+scenario:
+  test_sequence:
+    - dependency
+    - lint
+    - destroy
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    # -   idempotence
+    - side_effect
+    - verify
+    - destroy
+verifier:
+  name: testinfra

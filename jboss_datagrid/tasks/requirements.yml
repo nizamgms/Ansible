@@ -1,0 +1,52 @@
+---
+
+- name: install - install packages
+  yum:
+    name:
+      - unzip
+      - libaio
+    state: present
+  become_user: root
+  become: true
+
+- name: install - Install JDK 8 on RHEL 7
+  yum:
+    name:
+      - java-11-openjdk-devel
+    state: present
+  become_user: root
+  become: true
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: install - Install JDK 11 on RHEL 8
+  yum:
+    name:
+      - java-11-openjdk-devel
+    state: present
+  become_user: root
+  become: true
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "8"
+
+- name: Set Datagrid Artifact Facts
+  set_fact:
+    jboss_datagrid_artifact_tmp_dest: "{{ '/tmp/' + jboss_datagrid_artifact_name }}"
+
+- name: install - create Datagrid platform group
+  group:
+    name: "{{ jboss_datagrid_group }}"
+    state: present
+  become_user: root
+  become: true
+
+- name: install - create AMQ platform user
+  user:
+    name: "{{ jboss_datagrid_user }}"
+    group: "{{ jboss_datagrid_group }}"
+    state: present
+  become_user: root
+  become: true
+
+- name: install - check Existence of AMQ
+  stat:
+    path: "{{ jboss_datagrid_home }}"
+  register: jboss_datagrid_exists

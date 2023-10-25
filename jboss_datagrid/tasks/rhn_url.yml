@@ -1,0 +1,38 @@
+---
+
+- bock:
+#  - name: Fail for Missing Red Hat Network Username
+#    fail: msg="This role requires rhn_username to be set and non empty."
+#    when: transfer_method == 'csp-to-host' and (rhn_username is not defined or rhn_username == '')
+#    tags:
+#      - jboss_datagrid
+  
+#  - name: Fail for Missing Red Hat Network Password
+#    fail: msg="This role requires rhn_password to be set and non empty."
+#    when: transfer_method == 'csp-to-host' and (rhn_password is not defined or rhn_password == '')
+#    tags:
+#      - jboss_datagrid
+  
+#  - name: Async Download JBoss Data Grid from Red Hat Customer Portal
+#    redhat_csp_download:
+#      url: "{{ jboss_datagrid_artifact_url }}"
+#      dest: "{{ jboss_datagrid_artifact_dl_dest }}"
+#      username: "{{ rhn_username }}"
+#      password: "{{ rhn_password }}"
+#    async: 7200
+#    poll: 0
+#    register: jboss_datagrid_download
+#    tags:
+#      - jboss_datagrid
+#    when: transfer_method == 'csp-to-host' and jboss_datagrid_exists.stat.exists == false
+  
+  - name: 'Check On JBoss EAP Download Completion'
+    async_status: jid={{ jboss_datagrid_download.ansible_job_id }}
+    register: job_result1
+    until: job_result1.finished
+    retries: 600
+    delay: 10
+    tags:
+      - jboss_datagrid
+    when: transfer_method == 'csp-to-host' and jboss_datagrid_exists.stat.exists == false
+  

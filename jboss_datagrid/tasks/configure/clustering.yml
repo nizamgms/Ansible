@@ -1,0 +1,99 @@
+---
+
+- name: Print ansible host
+  debug:
+    msg: "Ansible host : {{ ansible_host }}"
+
+- name: debug cluster nodes
+  debug:
+    var: item
+  with_items: "{{ datagrid_cluster_nodes }}"
+
+
+- name: Get node id of the ansible host ip address from cluster nodes list
+  set_fact:
+     node_id: "{{ datagrid_cluster_nodes |  selectattr('ip', 'eq', ansible_host) | first}}"
+
+- name: Print node Id
+  debug:
+      var: node_id
+
+- name: Fail if node is not in the cluster node list
+  fail:
+     msg: Node id is  not in the cluster node list
+  when: node_id is not defined
+
+- name: Get cluster ips
+  set_fact:
+    cluster_ips:  "{{ datagrid_cluster_nodes |  map(attribute='ip') | list }}"
+
+- name: Build tccpping_initial_hosts
+  set_fact:
+    tcpping_initial_hosts:  "{{ cluster_ips | product(['[7800]']) |map ('join')| join(',') }}"
+
+- name: Print initialhosts list
+  debug:
+      var: tcpping_initial_hosts
+
+- name: Build fixed_members_value
+  set_fact:
+    fixed_members_value:  "{{ datagrid_cluster_nodes |  map(attribute='ip') | list | product(['/7800']) |map ('join')| join(',') }}"
+
+- name: Print fixed_members_value
+  debug:
+      var: fixed_members_value
+
+#Checkfor unique node names.   TBD
+- name: Get all node names.
+  set_fact:
+     node_id_list: "{{ datagrid_cluster_nodes |  map(attribute='node') | list }}"
+
+- name: Get Unique node id list.
+  set_fact:
+     unique_node_id_count: "{{ node_id_list | unique |length }}"
+
+
+- name: print unique node id count
+  debug:
+      var: unique_node_id_count
+
+- name: Fail if counts are different
+  fail:
+     msg: Node list is not unique {{ datagrid_cluster_nodes }}
+  when:  ( node_id_list is defined ) and ( node_id_list | length  > (unique_node_id_count | int ) )
+
+
+- name: Insert Jgroups to the infinispan.xml file
+  xml:
+     path: "{{ jboss_datagrid_home }}/server/conf/infinispan.xml"
+     xpath: /conf:infinispan/conf:cache-container
+     input_type: xml
+     insertbefore: yes
+     add_children: "{{ lookup('template', 'infinispan_jgroups.xml.j2') | replace(',','&#44;') }}  "
+     namespaces:
+       conf: urn:infinispan:config:12.1
+       server: urn:infinispan:server:12.1
+     pretty_print: yes
+
+- name: Setup cluster transport container name 
+  xml:
+    path: "{{ jboss_datagrid_home }}/server/conf/infinispan.xml"
+    xpath: /conf:infinispan/conf:cache-container/conf:transport
+    state: present
+    attribute: cluster
+    value:  "${infinispan.cluster.name:{{ datagrid_cluster_name }}}"
+    namespaces:
+      conf: urn:infinispan:config:12.1
+      server: urn:infinispan:server:12.1
+
+- name: Setup cluster transport node name 
+  xml:
+    path: "{{ jboss_datagrid_home }}/server/conf/infinispan.xml"
+    xpath: /conf:infinispan/conf:cache-container/conf:transport
+    state: present
+    attribute: node-name
+    value:  "${infinispan.node.name:{{ node_id.node }}}"
+    namespaces:
+      conf: urn:infinispan:config:12.1
+      server: urn:infinispan:server:12.1
+

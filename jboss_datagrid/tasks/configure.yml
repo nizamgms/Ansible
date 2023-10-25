@@ -1,0 +1,21 @@
+---
+
+- name: take backup of infinispan.xml file
+  copy:
+    src: "{{ jboss_datagrid_home }}/server/conf/infinispan.xml"
+    dest: "{{ jboss_datagrid_home }}/server/conf/infinispan.xml.original"
+    remote_src: yes
+
+- include_tasks: configure/users_roles.yml
+
+
+- include_tasks: configure/secure_bindings.yml
+
+- include_tasks: configure/standalone.yml
+  when: datagrid_cluster_enabled is not defined or  datagrid_cluster_enabled == false
+
+
+- include_tasks: configure/clustering.yml
+  when: datagrid_cluster_enabled
+
+- include_tasks: configure/tune_server_java.yml

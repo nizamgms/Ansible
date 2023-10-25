@@ -1,0 +1,19 @@
+# This script allows you to run Infinispan Server as a systemd service.
+# Modify environment properties in this script as appropriate.
+# Copy this script to the following location: /etc/systemd/system
+# Activate with 'systemctl daemon-reload'
+#               'systemctl start|enable infinispan'
+
+[Unit]
+Description=Jboss Datagrid Server Service
+After=network.target
+
+[Service]
+Environment="ISPN_HOME={{ jboss_datagrid_home }}"
+ExecStart={{ jboss_datagrid_home }}/bin/server.sh -b 0.0.0.0
+Type=simple
+User={{ jboss_datagrid_user }}
+
+[Install]
+WantedBy=multi-user.target
+

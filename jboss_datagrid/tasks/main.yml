@@ -1,0 +1,120 @@
+---
+
+# disable firwall useful in development setup
+#- name: Disable firewall
+#  service:
+#    name: firewalld
+#    state: stopped
+#    enabled: no
+#  when: disable_firewall
+#  tags:
+#    - jboss_datagrid
+#    - firewall
+
+- name: Fail for Missing Transfer Method
+  fail: msg="This role requires transfer_method to be set and non empty. See the README"
+  when: transfer_method is not defined or transfer_method == ''
+  tags:
+    - jboss_datagrid
+
+#### Set Facts
+- name: Set JBoss Datagrid Download Facts
+  set_fact:
+    jboss_datagrid_artifact_url: "{{ jboss_datagrid_artifact_source }}"
+    jboss_datagrid_artifact_dl_dest: "{{ '/tmp/' + jboss_datagrid_artifact_name }}"
+    jboss_datagrid_library_dest: "/opt/{{ jboss_datagrid_user }}"
+  tags:
+    - jboss_datagrid
+
+- name: Set JBoss Group Facts
+  set_fact:
+    jboss_datagrid_group: "{{ jboss_datagrid_user }}"
+  tags:
+    - jboss_datagrid
+
+##
+- name: Set JBoss JDG Service Directories Facts
+  set_fact:
+    jboss_datagrid_home: "{{ jboss_datagrid_library_dest }}/redhat-datagrid-{{jboss_datagrid_base_version}}-server"
+    jboss_datagrid_service_conf_dir: "/etc/{{ jboss_datagrid_base_version }}"
+    jboss_datagrid_service_log_dir: "/var/log/{{ jboss_datagrid_user }}"
+    jboss_datagrid_service_data_dir: "/var/run/{{ jboss_datagrid_user }}"
+  tags:
+    - jboss_datagrid
+
+
+- include_tasks: requirements.yml
+  tags: ["jboss:datagrid:requirements"]
+
+#- name: Install - Download Datagrid from RHN
+#  include_tasks: rhn_url.yml
+#  when: transfer_method == 'csp-to-host' and not jboss_datagrid_exists.stat.exists
+
+- name: Install - Copy Datagrid from controller
+  include_tasks: copy_from_controller.yml
+  when: transfer_method == 'copy-from-controller' and not jboss_datagrid_exists.stat.exists
+
+- name: Install - Copy Datagrid from URL
+  include_tasks: download_url.yml
+  when: transfer_method == 'url' and not jboss_datagrid_exists.stat.exists
+
+
+##
+# RHEL 8 expects systemd service 
+##
+- name: Set JBoss JDG Service Name EL 8 without service extension
+  set_fact:
+    jboss_datagrid_service_name: "{{ jboss_datagrid_service_file | splitext | first }}"
+  when: (ansible_distribution_major_version is version_compare('7','>='))
+  tags:
+    - jboss_datagrid
+
+- debug: msg="JDG HOME {{ jboss_datagrid_home }} and Service file {{jboss_datagrid_service_file}}  Service Name {{jboss_datagrid_service_name}}"
+
+#### Create Service Account
+
+- include: jboss_datagrid_service.yml
+
+#### Defensive Programming To Check If EAP Is Already Installed
+
+- name: Check Existence of Libraries
+  become: true
+  stat:
+    path: "{{ jboss_datagrid_library_dest + '/jboss-eap-6.4/version.txt'}}"
+  register: jboss_datagrid_exists
+  tags:
+    - jboss_datagrid
+
+- name: Extract JBoss DataGrid Libraries
+  become: true
+  unarchive:
+    src: "{{ jboss_datagrid_artifact_dl_dest }}"
+    dest: "{{ jboss_datagrid_library_dest }}"
+    creates: "redhat-datagrid-{{jboss_datagrid_base_version}}-server"
+    copy: no
+    owner: "{{ jboss_datagrid_user }}"
+    group: "{{ jboss_datagrid_group }}"
+  tags:
+    - jboss_datagrid
+  when: jboss_datagrid_exists.stat.exists == false
+
+- name: Add jboss datagrid Service
+  become: true
+  command: "systemctl enable {{jboss_datagrid_service_file}}"
+  tags:
+    - jboss_datagrid
+
+- name: Enable jboss datagrid Service
+  become: true
+  service:
+    name: "{{jboss_datagrid_service_file}}"
+    enabled: yes
+  tags:
+    - jboss_datagrid
+
+#### Set Sensible Defaults For Runtime
+
+## Configure JDG
+- include: configure.yml
+
+

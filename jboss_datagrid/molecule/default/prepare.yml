@@ -1,0 +1,10 @@
+---
+- name: Converge
+  hosts: "{{ ansible_target_host }}"
+  tasks:
+    - name: Install Required Packages for Testing
+      package:
+        name:
+          - initscripts
+          - sudo
+        state: present
