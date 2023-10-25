@@ -1,0 +1,29 @@
+---
+  - name: Install httpd
+    yum:
+      name: httpd
+      state: present
+    become: yes
+    
+  - name: Create apache group
+    group:
+      name: apache
+      gid: 1001
+  - name: Create apache user
+    user:
+      name: apache
+      group: apache
+      uid: 1002
+      
+  - name: Install mod ssl
+    yum:
+      name: mod_ssl
+      state: present
+    become: yes    
+    
+
+    
+
+
+  
+

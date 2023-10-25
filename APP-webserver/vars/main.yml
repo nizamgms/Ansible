@@ -1,0 +1,22 @@
+---
+# vars file for linux-install-webserver
+ssl_config:
+      -   insertafter: '#</Location>'
+          section: Location
+          block: |
+              <IfModule mod_headers.c>
+                # Remove X-Powerered-By header
+                Header unset X-Powered-By
+                Header always unset X-Powered-By
+              </IfModule>
+                            
+http_config:              
+      -   insertafter: 'Group apache'
+          block: |
+              #Disable invalid HTTP methods
+              RewriteEngine On
+              RewriteCond %{REQUEST_METHOD} ^OPTIONS
+              RewriteRule .* - [F]
+              RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)
+              RewriteRule .* - [F]
+  

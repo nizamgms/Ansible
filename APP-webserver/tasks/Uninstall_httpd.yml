@@ -1,0 +1,13 @@
+---
+  - name: stop the httpd server
+    service:
+      name: httpd
+      state: stopped
+    become: true
+    ignore_errors: yes
+    
+  - name: Uninstall httpd
+    yum:
+      name: httpd
+      state: absent
+    become: yes

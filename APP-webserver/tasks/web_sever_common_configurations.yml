@@ -1,0 +1,40 @@
+---
+  - name: Disable dav module 
+    lineinfile:
+      path: "/etc/httpd/conf.modules.d/00-dav.conf"
+      regexp: '^LoadModule dav_module modules/mod_dav.so'
+      line: '#LoadModule dav_module modules/mod_dav.so'
+      
+  - name: Disable dav module 
+    lineinfile:
+      path: "/etc/httpd/conf.modules.d/00-dav.conf"
+      regexp: '^LoadModule dav_fs_module modules/mod_dav_fs.so'
+      line: '#LoadModule dav_fs_module modules/mod_dav_fs.so'
+      
+  - name: Disable dav module 
+    lineinfile:
+      path: "/etc/httpd/conf.modules.d/00-dav.conf"
+      regexp: '^LoadModule dav_lock_module modules/mod_dav_lock.so'
+      line: '#LoadModule dav_lock_module modules/mod_dav_lock.so'
+      
+  - name: User Level configuration   
+    template:
+      src: "../files/apache.conf"
+      dest: "/etc/security/limits.d/"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+    
+  - name: Kernel parameters   
+    template:
+      src: "../files/98-apache.conf"
+      dest: "/etc/sysctl.d/"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root

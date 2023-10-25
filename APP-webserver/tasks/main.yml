@@ -1,0 +1,20 @@
+---
+# tasks file for kppp-webserver
+- name: Uninstall Web server
+  include_tasks: Uninstall_httpd.yml
+  
+- name: install_webserver 
+  include_tasks: install_webserver.yml
+  
+- name: configure_web_server_httpd
+  include_tasks: configure_web_server_httpd.yml
+  
+- name: configure ssl.conf
+  include_tasks: configure_web_server_ssl.yml
+  
+- name: common configurations
+  include_tasks: web_sever_common_configurations.yml
+  
+- name: start the httpd service
+  include_tasks: start_httpd.yml
+

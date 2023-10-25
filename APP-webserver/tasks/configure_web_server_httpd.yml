@@ -1,0 +1,209 @@
+---
+  - name: configure the httpd take backup
+    copy:
+      src: "/etc/httpd/conf/httpd.conf"
+      dest: "/etc/httpd/conf/httpd.conf.bkp"
+      remote_src: yes
+      mode: 0755
+      owner: root
+      group: root
+    
+  - name: configure ServerName
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ServerName Nizam.web.in
+      insertafter: '#ServerName www.example.com:80'
+      create: yes
+      
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ServerLimit 104
+      insertafter: 'ServerRoot "/etc/httpd"'
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ListenCoresBucketsRatio 8
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ThreadLimit 51 
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: StartServers 5 
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: MaxrequestWorkers 5000 
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: MinSpareThreads 75
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: MaxSpareThreads 250
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ThreadsPerChild 50
+      create: yes 
+
+  - name: configure Server
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: KeepAlive on
+      create: yes 
+      
+        
+  - name: Disable invalid HTTP methods
+    blockinfile:
+        path: /etc/httpd/conf/httpd.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - Disable invalid HTTP methods"
+        insertafter: "{{ item.insertafter }}"
+        block: "{{ item.block }}"
+    loop: "{{ http_config }}"
+    when:
+        - item|lower != 'none'
+      
+        
+  - name: Disable invalid HTTP methods 
+    blockinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      block: |
+        RewriteCond %{REQUEST_URI} ^http://.*$ [NC]
+        RewriteRule .* -  [R=404,L]
+
+  - name: LimitRequestBody to 75 MB
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: LimitRequestBody 78643200
+      create: yes      
+      
+  - name: Disable server signature
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ServerSignature Off
+
+  - name: Disable server signature
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: ServerTokens Prod
+  
+  - name: File e tag
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: FileETag None
+      create: yes
+      
+  - name: Trace off
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: TraceEnable off
+      insertafter: 'FileETag None'
+      create: yes 
+  
+  - name: CORS security
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set Access-Control-Allow-Origin %{ORIGIN}e env=ORIGIN
+      create: yes 
+        
+  - name: Disable host name lookups
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: HostnameLookups off
+      create: yes
+      
+  - name: XSS Protection
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set X-XSS-Protection "1; mode=block"
+      create: yes
+      
+  - name: Set origin 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set X-Frame-Options "SAMEORIGIN"
+      create: yes
+      
+  - name: Allow credentials to javascript 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header set Access-Control-Allow-Credentials true
+      create: yes
+
+  - name: Expose response headers to javascript 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set Access-Control-Expose-Headers "Authorization, DNT, X-Mx-ReqToken, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Origin, Accept"
+      create: yes
+      
+  - name: Disable mime type sniffing 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set X-Content-Type-Options "nosniff"
+      create: yes
+      
+  - name: Set Feature policy 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always set Feature-Policy "fullscreen 'none'; microphone 'none';autoplay 'none';camera 'none'"
+      create: yes
+      
+  - name: Disable cross domain policy 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header set X-Permitted-Cross-Domain-Policies "none"
+      create: yes
+      
+  - name: Secure cookies 
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: Header always edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure
+      
+  - name: Disable access to directory
+    lineinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      line: '    Options -Indexes'
+      insertafter: '<Directory />'
+  
+  - name: Disable indexes to /var/www
+    shell: sed -i '140i\    Options -Indexes' /etc/httpd/conf/httpd.conf
+    args:
+      warn: false
+    
+ 
+#  - name: Disable indexes to /var/www
+#    lineinfile:
+#      path: "/etc/httpd/conf/httpd.conf"
+#      line: '    Options -Indexes'
+#      insertafter: '<Directory "/var/www">'
+      
+  - name: Deny access to server-status page  
+    blockinfile:
+      path: "/etc/httpd/conf/httpd.conf"
+      block: |
+        #deny access to server-status
+        <Location /server-status>
+           SetHandler server-status
+           Order deny,allow
+           Deny from all
+           Require local
+        </Location>
+

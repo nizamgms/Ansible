@@ -1,0 +1,87 @@
+---
+  - name: configure the ssl take backup
+    copy:
+      src: "/etc/httpd/conf.d/ssl.conf"
+      dest: "/etc/httpd/conf.d/ssl.conf.bkp"
+      remote_src: yes
+      mode: 0755
+      owner: root
+      group: root
+      
+#  - name: standard HTTPS port
+#    lineinfile:
+#      path: "/etc/httpd/conf.d/ssl.conf"
+#      insertafter: '# standard HTTPS port in addition.'
+#      line: Listen 443 https
+  
+  - name: configure ssl
+    blockinfile:
+        path: /etc/httpd/conf.d/ssl.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - ssl config"
+        insertafter: "{{ item.insertafter }}"
+        block: "{{ item.block }}"
+    loop: "{{ ssl_config }}"
+    when:
+        - item|lower != 'none'
+        
+  - name: Enable SSL protocols 
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      regexp: '^#SSLProtocol all -SSLv3'
+      line: SSLProtocol -all +TLSv1.2 +TLSv1.3
+      
+  - name: Disable weak SSL proxy protocols 
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      regexp: '^#SSLProxyProtocol all -SSLv3'
+      line: SSLProxyProtocol -all +TLSv1.2 +TLSv1.3
+
+  - name: SSLProxyCheckPeerExpire
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLCertificateFile /etc/pki/tls/certs/localhost.crt'
+      line: SSLProxyCheckPeerExpire off
+      
+  - name: SSLProxyCheckPeerName
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLCertificateFile /etc/pki/tls/certs/localhost.crt'
+      line: SSLProxyCheckPeerName off
+      
+  - name: SSLProxyCheckPeerCN
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLCertificateFile /etc/pki/tls/certs/localhost.crt'
+      line: SSLProxyCheckPeerCN off
+      
+  - name: SSLProxyVerify
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLCertificateFile /etc/pki/tls/certs/localhost.crt'
+      line: SSLProxyVerify none
+
+  - name: Enable ProxyEngine
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLCertificateFile /etc/pki/tls/certs/localhost.crt'
+      line: SSLProxyEngine On
+        
+  - name: Remove server signature
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^#SSLVerifyDepth  10'
+      line: ServerSignature Off
+      
+  - name: Set X-Forwarded For port
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLProxyCipherSuite PROFILE=SYSTEM'
+      line: RequestHeader set X-Forwarded-Port "443"
+      
+  - name: Set X-Forwarded For https
+    lineinfile:
+      path: "/etc/httpd/conf.d/ssl.conf"
+      insertafter: '^SSLProxyCipherSuite PROFILE=SYSTEM'
+      line: RequestHeader set X-Forwarded-Proto "https"
+      
+  
