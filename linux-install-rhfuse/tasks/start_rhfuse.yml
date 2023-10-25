@@ -1,0 +1,8 @@
+---
+  - name: start the Redhat fuse server
+    systemd:
+      state: started
+      name: rhfuse.service
+      enabled: true
+    become: true
+

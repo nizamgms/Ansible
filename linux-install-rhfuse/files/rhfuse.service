@@ -1,0 +1,14 @@
+[Unit]
+Description=Redhat fuse server on jboss
+After= syslog.target network.target
+[Service]
+Type=forking
+RemainAfterExit=true
+ExecStart=/{{ rhfuse_jboss_home }}/bin/init.d/jboss-eap-rhel.sh start
+ExecStop=/{{ rhfuse_jboss_home }}/bin/init.d/jboss-eap-rhel.sh stop
+TimeoutStartSec=600
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target
+

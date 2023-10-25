@@ -1,0 +1,126 @@
+---
+  - name: "download jboss to {{ extract_directory }}"
+    get_url:
+      url: "{{ artifactory_baseurl }}/jboss/jboss-eap-{{ jboss_eap_major_version }}.{{ jboss_eap_minor_version }}.zip"
+      dest: "{{ extract_directory }}"
+      mode: '0755'
+  - name: "Extract the package"
+    unarchive:
+      src: "{{ extract_directory }}/jboss-eap-{{ jboss_eap_major_version }}.{{ jboss_eap_minor_version }}.zip"
+      dest: "{{ extract_directory }}"
+      remote_src: yes
+    when: not ansible_check_mode
+  - name: Create the temp directoey
+    file:
+      path: "/tmp/rhfuse"
+      state: directory
+
+  - name: "download rhfuse to /tmp/rhfuse"
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ rhfuse_package_name }}"
+      dest: "/tmp/rhfuse"
+      mode: '0755'
+
+  - name: Delete the installer file
+    file:
+      path: "{{ extract_directory }}/{{ item }}"
+      state: absent
+    with_items:
+      - "jboss-eap-{{ jboss_eap_major_version }}.{{ jboss_eap_minor_version }}.zip"
+
+  - name: Create Admin group
+    lineinfile:
+      dest: /etc/sudoers
+      state: present
+      line: '%admin ALL=(ALL) NOPASSWD: ALL'
+    become: yes
+    become_user: root  
+
+  - name: Create jboss group
+    group:
+      name: jboss
+      gid: 10001
+  - name: Create jboss user
+    user:
+      name: jboss
+      uid: 10002
+      group: "{{ item }}"
+    with_items:
+      - jboss
+#      - admin
+
+  - name: Create jboss directories
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0755
+      owner: jboss
+      group: jboss
+    with_items:
+      - "/var/log/jboss-eap"
+      - "/var/run/jboss-eap"
+      - "{{ rhfuse_jboss_home }}/vault"
+      - "{{ rhfuse_jboss_home }}/configuration"
+
+  - name: Set the ownership
+    file:
+      path: "{{ rhfuse_jboss_home }}"
+      owner: "jboss"
+      group: "jboss"
+      recurse: yes
+
+  - name: Run rhfuse java command
+    shell: "java -jar /tmp/rhfuse/{{ rhfuse_package_name }}"
+    args:
+      chdir: "{{ rhfuse_jboss_home }}"
+
+  - name: copy the jboss eap script
+    template:
+      src: "../files/jboss-eap.conf"
+      dest: "/etc/default"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+
+  - name: copy the jboss systemd script
+    template:
+      src: "../files/rhfuse.service"
+      dest: "/usr/lib/systemd/system"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+    
+  - name: configure java parameters
+    lineinfile:
+      path: "{{ rhfuse_jboss_home }}/bin/standalone.conf"
+      regexp: '^   JAVA_OPTS="-Xms1303m -Xmx1303m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true"'
+      line: '   JAVA_OPTS="-XX:InitialRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0 -Xmx1303m -Xms1303m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=1024m -Djava.net.preferIPv4Stack=true"'
+
+  - name: configure java parameters 
+    blockinfile:
+      path: "{{ rhfuse_jboss_home }}/bin/standalone.conf"
+      insertbefore: "# enable garbage collection logging if not set in environment differently"
+      block: |
+        JAVA_OPTS="$JAVA_OPTS -XX:+UseG1GC"
+        JAVA_OPTS="$JAVA_OPTS -Duser.country=IN -Duser.timezone=Asia/Calcutta"
+        JAVA_OPTS="$JAVA_OPTS -server"
+
+#  - name: Disable AJP port
+#    lineinfile:
+#      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone.xml"
+#      regex: '^<socket-binding name="ajp"'
+#      line: <!-- <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/> -->
+
+#  - name: Enable systemd service
+#    systemd:
+#      name: rhfuse.service
+#      enabled: yes
+#      state: started
+#      daemon_reexec: yes
+

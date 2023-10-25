@@ -1,0 +1,13 @@
+---
+  - name: Stop rhfuse service
+    systemd:
+      name: rhfuse.service
+      state: stopped
+    ignore_errors: yes
+    
+  - name: Remove the RHFUSE value
+    file:
+      path: "{{ extract_directory }}/{{ item }}"
+      state: absent
+    with_items:
+      - "jboss-eap-{{ jboss_eap_major_version }}"

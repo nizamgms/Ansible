@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: rhfuse Role
+      include_role:
+        name: "../../../"

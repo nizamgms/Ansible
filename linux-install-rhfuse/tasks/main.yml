@@ -1,0 +1,26 @@
+---
+# tasks file for linux-install-rhfuse
+- name: prepare workspace
+  include_tasks: prepare.yml 
+  
+- name: Uninstall rhfuse
+  include_tasks: uninstall_rhfuse.yml
+#  when: execute_action == "uninstall"
+
+- name: Install prerequsite
+  include_tasks: install_java_jdk.yml
+#  when: execute_action == "install"
+
+- name: Install RH fuse
+  include_tasks: install_rhfuse.yml
+#  when: execute_action == "install"
+  
+- name: configure rhfuse
+  include_tasks: configure_rhfuse_ha.yml
+
+- name: Patch RH fuse
+  include_tasks: patching.yml
+  when: execute_action == "patching"
+
+- name: start the service
+  include_tasks: start_rhfuse.yml

@@ -1,0 +1,268 @@
+---
+  - name: configure the standalaone take backup
+    copy:
+      src: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      dest: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml.bkp"
+      remote_src: yes
+      mode: 0755
+      owner: jboss
+      group: jboss
+    when: jboss_configfile_path == "standalone-ha.xml"
+    
+  - name: Create vault file and  certificate key file
+    include_tasks: create_vault_security.yml
+      
+  - name: insert the vault block
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:system-properties
+      insertafter: yes
+      input_type: yaml
+      add_children: 
+         - vault:
+            _:
+               - vault-option:
+                     name: 'KEYSTORE_URL'
+                     value: '${jboss.home.dir}/vault/vault.keystore'
+               - vault-option:
+                      name: 'KEYSTORE_PASSWORD' 
+                      value: 'MASK-0F/{{ mask_pasword_output.stdout}}'
+               - vault-option:
+                       name: 'KEYSTORE_ALIAS'
+                       value: 'vault'
+               - vault-option:
+                        name: 'SALT'
+                        value: '1234abcd'
+               - vault-option:
+                        name: 'ITERATION_COUNT'
+                        value: '120'
+               - vault-option:
+                        name: 'ENC_FILE_DIR'
+                        value: '${jboss.home.dir}/vault/'
+      state: present
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: XML Configure self-signed SSL certificate for ApplicationRealm
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ApplicationRealm']/conf:server-identities/conf:ssl
+      input_type: xml
+      set_children: |
+                  <keystore path="rhfuse.jks" relative-to="jboss.server.config.dir" keystore-password="${VAULT::vbjks::jks_password::1}" alias="rhfuse" key-password="${VAULT::vbjks::jks_password::1}" />
+      namespaces:
+         conf: urn:jboss:domain:16.0
+        
+  - name: XML Configure self-signed SSL certificate for ManagementRealm Add ssl element
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ManagementRealm']/conf:server-identities/conf:ssl
+      state: present
+      namespaces:
+         conf: urn:jboss:domain:16.0
+
+
+  - name: XML Configure self-signed SSL certificate for ManagementRealm
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ManagementRealm']/conf:server-identities/conf:ssl
+      input_type: xml
+      set_children: |
+                  <keystore path="rhfuse.jks" relative-to="jboss.server.config.dir" keystore-password="${VAULT::vbjks::jks_password::1}" alias="rhfuse" key-password="${VAULT::vbjks::jks_password::1}" />
+      namespaces:
+         conf: urn:jboss:domain:16.0
+      
+  - name: Change management-https socket
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:management-interfaces/conf:http-interface[@security-realm='ManagementRealm']/conf:socket-binding
+      attribute: 'https'
+      value: management-https
+      namespaces:
+         conf: urn:jboss:domain:16.0
+            
+  - name: insert the mangementhttps interface
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:interfaces
+      input_type: xml
+      add_children: |
+            <interface name="managementhttps">
+               <inet-address value="${jboss.bind.address.management:127.0.0.1}"/>
+            </interface>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: configure management socket
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:interfaces/conf:interface[@name='management']
+      input_type: xml
+      set_children: |
+                              <inet-address value="127.0.0.1"/>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+ 
+  - name: Change management-https socket
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:socket-binding-group/conf:socket-binding[@name='management-https']
+      input_type: xml
+      attribute: 'interface'
+      value: managementhttps
+      namespaces:
+         conf: urn:jboss:domain:16.0   
+      
+  - name: Disable ajp
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:ajp-listener[@name='ajp']
+      attribute: enabled
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+         
+  - name: Change listener from ajp to https
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:proxy[@name='default']
+      attribute: listener
+      value: 'https'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:modcluster:5.0
+      
+  - name: Allow only thru https
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:http-listener[@name='default']
+      attribute: 'enabled'
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+      
+  - name: Enable https - enable TLS
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:https-listener[@name='https']
+      attribute: enabled-protocols
+      value: 'TLSv1.1,TLSv1.2,TLSv1.3' 
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+
+  - name: Enable https - disable HEAD TRACE and OPTIONS
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:https-listener[@name='https']
+      attribute: disallowed-methods
+      value: 'HEAD TRACE OPTIONS'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+      
+  - name: Disable dynamic deployment of applications zipped
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/*/conf1:deployment-scanner
+      attribute: auto-deploy-zipped
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:deployment-scanner:2.0
+
+  - name: Disable dynamic deployment of applications exploded
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/*/conf1:deployment-scanner
+      attribute: auto-deploy-exploded
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:deployment-scanner:2.0
+         
+  - name: Change multicast IP address mping
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:socket-binding-group/conf:socket-binding[@name='jgroups-mping']
+      input_type: xml
+      attribute: 'multicast-address'
+      value: ${jboss.default.multicast.address:230.0.0.6}
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: Change multicast IP address udp
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:socket-binding-group/conf:socket-binding[@name='jgroups-udp']
+      input_type: xml
+      attribute: 'multicast-address'
+      value: ${jboss.default.multicast.address:230.0.0.6}
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: Change multicast IP address modcluster
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:socket-binding-group/conf:socket-binding[@name='modcluster']
+      input_type: xml
+      attribute: 'multicast-address'
+      value: ${jboss.modcluster.multicast.address:224.0.1.107}
+      namespaces:
+         conf: urn:jboss:domain:16.0
+  
+  - name: configure udp stacks
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:stacks/conf1:stack[@name='udp']/conf1:protocol[@type='pbcast.STABLE']
+      insertafter: yes
+      input_type: xml
+      add_children: |
+             <auth-protocol type="AUTH">
+                <digest-token algorithm="SHA-512">
+                     <shared-secret-reference clear-text="${VAULT::vbjgroups::jgroups_password::1}"/>
+                 </digest-token>
+             </auth-protocol>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:jgroups:8.0
+         
+  - name: configure tcp stacks
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:stacks/conf1:stack[@name='tcp']/conf1:protocol[@type='pbcast.STABLE']
+      insertafter: yes
+      input_type: xml
+      add_children:
+             <auth-protocol type="AUTH">
+                <digest-token algorithm="SHA-512">
+                     <shared-secret-reference clear-text="${VAULT::vbjgroups::jgroups_password::1}"/>
+                </digest-token>
+             </auth-protocol>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:jgroups:8.0
+
+  - name: Add instance id
+    xml:
+      path: "{{ rhfuse_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]
+      attribute: instance-id
+      value: '{{ ansible_host }}'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+   
+  - name: Create jboss eap management admin user
+    shell: |
+      {{ rhfuse_jboss_home }}/bin/add-user.sh eapadmin {{ eap_admin_password }}
+
+  - name: Set the ownership
+    file:
+      path: "{{ rhfuse_jboss_home }}"
+      owner: "jboss"
+      group: "jboss"
+      recurse: yes
+    become: yes

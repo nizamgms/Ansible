@@ -1,0 +1,20 @@
+---
+# defaults file for linux-install-rhfuse
+artifactory_baseurl: "http://192.168.56.104:8080/softwares/rh/"
+extract_directory: "/opt"
+jboss_mode: "standalone"
+jboss_eap_major_version: "7.4"
+jboss_eap_minor_version: "0"
+jboss_configfile_path: "{{ jboss_mode }}-ha.xml"
+rhfuse_package_name: "fuse-eap-installer-7.9.0.jar"
+rhfuse_jboss_home: "{{ extract_directory }}/jboss-eap-{{ jboss_eap_major_version }}"
+jboss_patch_package_name: "jboss-eap-7.4.1-patch.zip"
+patch_download_directory: "/tmp/patch/"
+execute_action: "install"
+rhfuse_certificate_dn: "CN=rhsso.kppp.karnataka.gov.in,OU=CeG,O=GOK,L=Bengaluru,ST=Karnataka,C=IN"
+
+vault_password: "vaultpass123"
+ssl_ks_password: "certpassword"
+rh_fuse_db_password: "Start@123"
+ssl_jks_password: "Start@123"
+ssl_jgroup_auth_password: "Start@123"
