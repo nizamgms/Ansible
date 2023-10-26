@@ -1,0 +1,112 @@
+---
+  - name: "download jboss to {{ extract_directory }}"
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ jboss_eap_package_name }}"
+      dest: "{{ extract_directory }}"
+      mode: '0755'
+  - name: "Extract the package"
+    unarchive:
+      src: "{{ extract_directory }}/{{ jboss_eap_package_name }}"
+      dest: "{{ extract_directory }}"
+      remote_src: yes
+    when: not ansible_check_mode
+  - name: Create the temp directoey
+    file:
+      path: "{{ extract_directory }}/rhpam"
+      state: directory
+
+  - name: "download jboss to {{ extract_directory }}"
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ rhpam_package_name }}"
+      dest: "{{ extract_directory }}"
+      mode: '0755'
+
+  - name: "Extract the package"
+    unarchive:
+      src: "{{ extract_directory }}/{{ rhpam_package_name }}"
+      dest: "{{ extract_directory }}/rhpam"
+      remote_src: yes
+    when: not ansible_check_mode
+  - name: Delete the installer file
+    file:
+      path: "{{ extract_directory }}/{{ item }}"
+      state: absent
+    with_items:
+      - "{{ jboss_eap_package_name }}"
+      - "{{ rhpam_package_name }}"
+
+  - name: Get the jboss  directory name
+    shell: "ls  /{{ extract_directory }} |grep -i jboss"
+    register: rhjboss_download_directory
+
+  - name: Get the directory name
+    shell: "ls  /{{ extract_directory }}/rhpam | head -n 1"
+    register: rhpam_download_directory
+
+  - name: copy the jboss files
+    shell: "cp -r -n {{ extract_directory }}/rhpam/{{ rhpam_download_directory.stdout }}/* {{ extract_directory }}/{{ rhjboss_download_directory.stdout }}/"
+
+  - name: Delete the rhpam installer file
+    file:
+      path: "{{ extract_directory }}/rhpam"
+      state: absent
+
+  - name: Create jboss group
+    group:
+      name: jboss
+      gid: 10001
+  - name: Create jboss user
+    user:
+      name: jboss
+      uid: 10002
+      group: jboss
+  - name: set jboss home
+    set_fact:
+      jboss_home: "{{ extract_directory }}/{{ rhjboss_download_directory.stdout }}"
+
+  - name: Set the ownership
+    file:
+      path: "{{ item }}"
+      owner: "jboss"
+      group: "jboss"
+      recurse: yes
+    with_items:
+      - "{{ jboss_home }}"
+      - "/var/log/jboss-eap"
+
+  - name: copy the jboss eap script
+    template:
+      src: "../files/jboss-eap.conf"
+      dest: "/etc/default"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+
+  - name: copy the jboss systemd script
+    template:
+      src: "../files/rhpam.service"
+      dest: "/etc/systemd/system/"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+
+#  - name: Disable AJP port
+#    lineinfile:
+#      path: "{{ jboss_home }}/standalone/configuration/standalone.xml"
+#      regex: '^<socket-binding name="ajp"'
+#      line: <!-- <socket-binding name="ajp" port="${jboss.ajp.port:8009}"/> -->
+
+  - name: Enable systemd service
+    systemd:
+      name: rhpam.service
+      enabled: yes
+      state: started
+      daemon_reexec: yes
+
+

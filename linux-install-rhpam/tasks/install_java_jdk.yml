@@ -1,0 +1,9 @@
+---
+ - name: download the jdk package
+   yum:
+     name: "java-11-openjdk-devel.x86_64"
+     state: latest
+   become: yes
+
+ - name: test the java version
+   shell: "java --version"

@@ -1,0 +1,42 @@
+---
+  - name: Get the jboss  directory name
+    shell: "ls  /{{ extract_directory }} |grep -i jboss"
+    register: rhjboss_download_directory
+
+  - name: set jboss home
+    set_fact:
+      jboss_home: "{{ extract_directory }}/{{ rhjboss_download_directory.stdout }}"
+
+  - name: Create the installer directory
+    file:
+      path: "{{ patch_download_directory }}"
+      state: directory
+
+  - name: download jboss package
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ jboss_patch_package_name }}"
+      dest: "{{ patch_download_directory }}/{{ jboss_patch_package_name }}"
+      mode: '0755'
+
+  - name: Enable systemd service
+    systemd:
+      name: rhpam.service
+      state: restarted
+
+  - name: Apply the patch
+    shell: "{{ jboss_home }}/bin/jboss-cli.sh {{'--command='~cmd|quote }}"
+    become: yes
+    become_user: jboss
+    vars:
+      cmd: "patch apply {{ patch_download_directory }}/{{ jboss_patch_package_name }} --override-all"
+  - name: Delete the installer file
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - "{{ patch_download_directory }}"
+
+  - name: Enable systemd service
+    systemd:
+      name: rhpam.service
+      state: restarted

@@ -1,0 +1,11 @@
+---
+  - name: Enable systemd service
+    systemd:
+      name: rhpam.service
+      state: stopped
+  - name: Remove the RHPAM value
+    file:
+      path: "{{ extract_directory }}/{{ item }}"
+      state: absent
+    with_items:
+      - "jboss-eap-{{ jboss_version }}"

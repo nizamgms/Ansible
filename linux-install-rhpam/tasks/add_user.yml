@@ -1,0 +1,13 @@
+---
+  - name: Get the jboss  directory name
+    shell: "ls  /{{ extract_directory }} |grep -i jboss"
+    register: rhjboss_download_directory
+
+  - name: set jboss home
+    set_fact:
+      jboss_home: "{{ extract_directory }}/{{ rhjboss_download_directory.stdout }}"
+
+  - name add user
+    shell: "{{ jboss_home }}/bin/add-user.sh {{ item.jboss_username}} {{ item.jboss_password }}"
+    with_items:
+      - "{{ jboss_add_user }}"

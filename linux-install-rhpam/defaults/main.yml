@@ -1,0 +1,10 @@
+---
+# defaults file for linux-install-rhpam
+artifactory_baseurl: "http://192.168.56.104:8080/softwares/rh/"
+extract_directory: "/opt"
+jboss_mode: "standalone"
+jboss_configfile_path: "{{ jboss_mode }}.xml"
+rhpam_package_name: "rhpam-7.11.1-business-central-eap7-deployable.zip"
+jboss_eap_package_name: "jboss-eap-7.3.0.zip"
+execute_action: "install"
+patch_download_directory: "/tmp/jboss_patch"

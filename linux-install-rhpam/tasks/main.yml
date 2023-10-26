@@ -1,0 +1,21 @@
+---
+# tasks file for linux-install-rhpam
+- name: Uninstall RH PAM
+  include_tasks: uninstall_rhpam.yml
+  when: execute_action == "uninstall"
+
+- name: Install prerequsite
+  include_tasks: install_java_jdk.yml
+  when: execute_action == "install"
+
+- name: Install RH PAM
+  include_tasks: install_rhpam.yml
+  when: execute_action == "install"
+
+- name: Patch RH PAM
+  include_tasks: patching.yml
+  when: execute_action == "patching"
+
+- name: Add users
+  include_tasks: add_user.yml
+  when: execute_action == "add_user"

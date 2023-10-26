@@ -1,0 +1,13 @@
+[Unit]
+Description=The RH PAM server
+
+[Service]
+Type=forking
+RemainAfterExit=true
+ExecStart=/usr/bin/sudo /bin/bash -lc '{{ jboss_home }}/bin/init.d/jboss-eap-rhel.sh start'
+ExecStop=/usr/bin/sudo /bin/bash -lc '{{ jboss_home }}/bin/init.d/jboss-eap-rhel.sh stop'
+TimeoutStartSec=600
+TimeoutStopSec=600
+
+[Install]
+WantedBy=multi-user.target
