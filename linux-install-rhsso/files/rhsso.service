@@ -1,0 +1,14 @@
+[Unit]
+Description=The RH SSO server
+After= syslog.target network.target
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/{{ rhsso_jboss_home }}/bin/init.d/jboss-eap-rhel.sh start
+ExecStop=/{{ rhsso_jboss_home }}/bin/init.d/jboss-eap-rhel.sh stop
+SuccessExitStatus= 0 143
+Restart = on-failure
+RestartSec = 60
+
+[Install]
+WantedBy=multi-user.target

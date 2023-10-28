@@ -1,0 +1,91 @@
+---
+  - name: "download rhsso to {{ rhsso_extract_directory }}"
+    get_url:
+      url: "{{ artifactory_baseurl }}/rh-sso-{{ rhsso_major_version }}.{{ rhsso_minor_version }}-server-dist.zip"
+      dest: "{{ rhsso_extract_directory }}"
+      mode: '0755'
+
+  - name: "Extract the package"
+    unarchive:
+      src: "{{ rhsso_extract_directory }}/rh-sso-{{ rhsso_major_version }}.{{ rhsso_minor_version }}-server-dist.zip"
+      dest: "{{ rhsso_extract_directory }}"
+      remote_src: yes
+    when: not ansible_check_mode
+    
+  - name: copy the jboss eap script
+    template:
+      src: "../files/jboss-eap.conf"
+      dest: "/etc/default"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+    become: yes
+    become_user: root
+    #  - name: Install ssh pass
+    #yum:
+    #  name: sshpass.x86_64
+    #  state: present
+    #become: yes
+  - name: Create jboss group
+    group:
+      name: jboss
+      gid: 10001
+  - name: Create jboss user
+    user:
+      name: jboss
+      uid: 10002
+      group: jboss
+      
+  - name: Set the ownership
+    file:
+      path: "{{ rhsso_jboss_home }}"
+      owner: "jboss"
+      group: "jboss"
+      recurse: yes
+
+  - name: copy the jboss systemd script
+    template:
+      src: "../files/rhsso.service"
+      dest: "/usr/lib/systemd/system/"
+      remote_src: no
+      mode: "755"
+      owner: "root"
+      group: "root"
+      force: yes
+    become: yes
+    become_user: root
+
+#  - name: Create script directory
+#    file:
+#      path: "{{ rhsso_jboss_home }}/scripts"
+#      state: directory
+#      mode: '0755'
+#      owner: "jboss"
+#      group: "jboss"
+
+#  - name: copy the jboss startup script
+#    template:
+#      src: "../files/{{ item }}"
+#      dest: "{{ rhsso_jboss_home }}/scripts/{{ item }}"
+#      remote_src: no
+#      mode: "755"
+#      owner: "jboss"
+#      group: "jboss"
+#    become: yes
+#    become_user: jboss
+#    with_items:
+#      - startup-rhsso.sh
+#      - stop-rhsso.sh
+#      - start-rhsso.sh
+
+#  - name: Enable systemd service
+#    systemd:
+#      name: rhsso.service
+#      enabled: yes
+#      state: started
+
+  - name: Delete the installer file
+    file:
+      path: "{{rhsso_extract_directory}}/rh-sso-{{ rhsso_major_version }}.{{ rhsso_minor_version }}-server-dist.zip"
+      state: absent

@@ -1,0 +1,65 @@
+---
+  - name: create certificate for clustered SSO
+    shell: 'keytool -genkey -keystore {{ rhsso_jboss_home }}/configuration/rhsso.jks -validity 4000 -keysize 2048 -keyalg RSA -dname {{ rhsso_certificate_dn }} -keypass {{ ssl_jks_password }} -storepass {{ ssl_jks_password }} -noprompt -alias rhsso -ext san="ip:{{ node1_ip_address }},ip:{{ node2_ip_address }}"'
+    ignore_errors: yes
+    delegate_to: "{{ node2_ip_address }}"
+    run_once: yes
+    when: rhsso_jboss_configfile_path == "standalone-ha.xml"
+
+  - name: create certificate for standalone sso
+    shell: 'keytool -genkey -keystore {{ rhsso_jboss_home }}/standalone/configuration/rhsso.jks -validity 4000 -keysize 2048 -keyalg RSA -dname {{ rhsso_certificate_dn }} -keypass {{ ssl_jks_password }} -storepass {{ ssl_jks_password }} -noprompt -alias rhsso -ext san="ip:{{ node1_ip_address }}"'
+    ignore_errors: yes
+    run_once: yes
+#    when: rhsso_jboss_configfile_path == "standalone.xml"
+
+
+  - name: copy certificate
+    fetch:
+      src: "{{ rhsso_jboss_home }}/configuration/rhsso.jks"
+      dest: "/tmp/rhsso.jks"
+      flat: yes
+    delegate_to: "{{ node2_ip_address }}"
+    run_once: yes
+    when: rhsso_jboss_configfile_path == "standalone-ha.xml"
+
+  - name: copy certificate
+    copy:
+      dest: "{{ rhsso_jboss_home }}/configuration/rhsso.jks"
+      src: "/tmp/rhsso.jks"
+    delegate_to: "{{ node1_ip_address }}"
+    run_once: yes
+    when: rhsso_jboss_configfile_path == "standalone-ha.xml"
+    
+  - name: Create vault
+    shell: "keytool -genseckey -alias vault -storetype jceks -keyalg AES -keysize 128 -storepass {{ vault_password }} -keypass {{ vault_password }} -validity 4000 -keystore {{ rhsso_jboss_home }}/vault/vault.keystore" 
+    args:
+      chdir: "{{ rhsso_jboss_home }}/bin"
+    ignore_errors: yes
+
+  - name: Configure vault
+    shell: "{{ rhsso_jboss_home }}/bin/vault.sh --keystore {{ rhsso_jboss_home }}/vault/vault.keystore --keystore-password {{ vault_password }} --alias vault --vault-block vbdb --attribute sso_ds_password --sec-attr {{ rh_sso_db_password }} --enc-dir {{ rhsso_jboss_home }}/vault --iteration 120 --salt 1234abcd"
+    register: vault_masked_password
+  - name: save the result to file
+    copy:
+      content: "{{ vault_masked_password.stdout }}"
+      dest: "/tmp/vault_output"
+  - name: get the MASK Password
+    shell: "cat /tmp/vault_output | grep -i MASK-| head -1 |awk '{print $5}' | cut -c10-28"
+    register: mask_pasword_output
+
+#  - name: Delete the temp file
+#    file:
+#      path: "/tmp/vault_output"
+#      state: absent
+    
+  - name: Add db password under vault block
+    shell: "{{ rhsso_jboss_home }}/bin/vault.sh --keystore {{ rhsso_jboss_home }}/vault/vault.keystore --keystore-password {{ vault_password }}  --alias vault --vault-block vbdb --attribute sso_ds_password --sec-attr {{ rh_sso_db_password }}  --enc-dir {{ rhsso_jboss_home }}/vault --iteration 120 --salt 1234abcd"
+    ignore_errors: yes
+
+  - name: Configure ssl jks password to vault
+    shell: "{{ rhsso_jboss_home }}/bin/vault.sh --keystore {{ rhsso_jboss_home }}/vault/vault.keystore --keystore-password {{ vault_password }} --alias vault --vault-block vbjks --attribute jks_password --sec-attr {{ ssl_jks_password }} --enc-dir {{ rhsso_jboss_home }}/vault --iteration 120 --salt 1234abcd"
+    ignore_errors: yes
+
+  - name: Configure Jgroups password to vault
+    shell: "{{ rhsso_jboss_home }}/bin/vault.sh --keystore {{ rhsso_jboss_home }}/vault/vault.keystore --keystore-password {{ vault_password }} --alias vault --vault-block vbjgroups --attribute jgroups_password --sec-attr {{ ssl_jgroup_auth_password }} --enc-dir {{ rhsso_jboss_home }}/vault --iteration 120 --salt 1234abcd"
+    ignore_errors: yes

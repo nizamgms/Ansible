@@ -1,0 +1,435 @@
+---
+  - name: configure the standalaone take backup
+    copy:
+      src: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      dest: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml.bkp"
+      remote_src: yes
+      mode: 0755
+      owner: jboss
+      group: jboss
+    when: rhsso_jboss_configfile_path == "standalone-ha.xml"
+    
+ # tasks common tasks for standalone configuration
+  - name: configure common 
+    include_tasks: configure_rhsso_common.yml
+
+  - name: Create vault file and  certificate key file
+    include_tasks: create_vault_security.yml
+      
+  - name: insert the vault block
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:extensions
+      insertafter: yes
+      input_type: yaml
+      add_children: 
+         - vault:
+            _:
+               - vault-option:
+                     name: 'KEYSTORE_URL'
+                     value: '${jboss.home.dir}/vault/vault.keystore'
+               - vault-option:
+                      name: 'KEYSTORE_PASSWORD' 
+                      value: 'MASK-0F/{{ mask_pasword_output.stdout}}'
+               - vault-option:
+                       name: 'KEYSTORE_ALIAS'
+                       value: 'vault'
+               - vault-option:
+                        name: 'SALT'
+                        value: '1234abcd'
+               - vault-option:
+                        name: 'ITERATION_COUNT'
+                        value: '120'
+               - vault-option:
+                        name: 'ENC_FILE_DIR'
+                        value: '${jboss.home.dir}/vault/'
+      state: present
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: XML Configure self-signed SSL certificate for ApplicationRealm
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ApplicationRealm']/conf:server-identities/conf:ssl
+      input_type: xml
+      set_children: |
+                  <keystore path="rhsso.jks" relative-to="jboss.server.config.dir" keystore-password="${VAULT::vbjks::jks_password::1}" alias="rhsso" key-password="${VAULT::vbjks::jks_password::1}"/>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+        
+  - name: XML Configure self-signed SSL certificate for ManagementRealm Add ssl element
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ManagementRealm']/conf:server-identities/conf:ssl
+      state: present
+      namespaces:
+         conf: urn:jboss:domain:16.0
+
+
+  - name: XML Configure self-signed SSL certificate for ManagementRealm
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:security-realms/conf:security-realm[@name='ManagementRealm']/conf:server-identities/conf:ssl
+      input_type: xml
+      set_children: |
+                  <keystore path="rhsso.jks" relative-to="jboss.server.config.dir" keystore-password="${VAULT::vbjks::jks_password::1}" alias="rhsso" key-password="${VAULT::vbjks::jks_password::1}"/>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+      
+  - name: Change management-https socket
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:management/conf:management-interfaces/conf:http-interface[@security-realm='ManagementRealm']/conf:socket-binding
+      attribute: 'https'
+      value: management-https
+      namespaces:
+         conf: urn:jboss:domain:16.0
+            
+  - name: insert the mangementhttps interface
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:interfaces
+      input_type: xml
+      add_children: |
+            <interface name="managementhttps">
+               <inet-address value="${jboss.bind.address.management:127.0.0.1}"/>
+            </interface>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         
+  - name: configure management socket
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:interfaces/conf:interface[@name='management']
+      input_type: xml
+      set_children: |
+                              <inet-address value="127.0.0.1"/>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+ 
+  - name: Change management-https socket
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:socket-binding-group/conf:socket-binding[@name='management-https']
+      input_type: xml
+      attribute: 'interface'
+      value: managementhttps
+      namespaces:
+         conf: urn:jboss:domain:16.0   
+      
+  - name: Disable ajp
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:ajp-listener[@name='ajp']
+      attribute: enabled
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+         
+  - name: Change listener from ajp to https
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:proxy[@name='default']
+      attribute: listener
+      value: 'https'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:modcluster:5.0
+      
+  - name: Allow only thru https
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:http-listener[@name='default']
+      attribute: 'enabled'
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+      
+  - name: Enable https - enable TLS
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:https-listener[@name='https']
+      attribute: enabled-protocols
+      value: 'TLSv1.1,TLSv1.2,TLSv1.3' 
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+
+  - name: Enable https - disable HEAD TRACE and OPTIONS
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]/conf1:server[@name='default-server']/conf1:https-listener[@name='https']
+      attribute: disallowed-methods
+      value: 'HEAD TRACE OPTIONS'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+      
+  - name: Disable dynamic deployment of applications zipped
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/*/conf1:deployment-scanner
+      attribute: auto-deploy-zipped
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:deployment-scanner:2.0
+
+  - name: Disable dynamic deployment of applications exploded
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/*/conf1:deployment-scanner
+      attribute: auto-deploy-exploded
+      value: 'false'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:deployment-scanner:2.0
+  
+  - name: Add MySQL driver to datasources/driver
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:datasources/conf1:drivers
+      set_children: 
+            - driver:
+                name: 'mysql' 
+                module: 'com.mysql' 
+                _:
+                  - driver-class: com.mysql.cj.jdbc.Driver
+                  - xa-datasource-class: com.mysql.cj.jdbc.MysqlXADataSource
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:datasources:6.0
+
+  - name: Add KeyCloakDS child elements and attributes with mysql connection
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:datasources/conf1:datasource[@jndi-name='java:jboss/datasources/KeycloakDS']
+      set_children: 
+            - connection-url: '{{ rhsso_jdbc_connection_string }}'
+            - driver: 'mysql'
+            - pool:
+               _:
+                  - min-pool-size: '3'
+                  - max-pool-size: '100'
+                  - prefill: 'true'
+            - security:
+               _:
+                  - user-name: '{{ rhsso_mssql_username }}'
+                  - password: '${VAULT::vbdb::sso_ds_password::1}'
+            - validation:
+               _:
+                  - valid-connection-checker:
+                     class-name: 'org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker'
+                  - validate-on-match: 'true'
+                  - exception-sorter:
+                      class-name: 'org.jboss.jca.jdbc.extensions.mysql.MySQLExeptionSorter'
+            - timeout:
+               _:
+                  - set-tx-query-timeout: 'false'
+                  - blocking-timeout-millis: '0'
+                  - idle-timeout-minutes: '0'
+                  - use-try-lock: '0'
+                  - allocation-retry: '0'
+                  - allocation-retry-wait-millis: '0'
+      pretty_print: yes
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:datasources:6.0
+         
+  - name: enable statics in datasource
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:datasources/conf1:datasource[@jndi-name='java:jboss/datasources/KeycloakDS']
+      attribute: statistics-enabled
+      value: '${wildfly.datasources.statistics-enabled:${wildfly.statistics-enabled:true}}'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:datasources:6.0
+         
+  - name: replace ExampleDS with KeycloackDS
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:default-bindings
+      attribute: datasource
+      value: 'java:jboss/datasources/KeycloakDS'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:ee:6.0
+  
+  - name: configure udp stacks
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:stacks/conf1:stack[@name='udp']/conf1:protocol[@type='pbcast.STABLE']
+      insertafter: yes
+      input_type: xml
+      add_children: |
+             <auth-protocol type="AUTH">
+                <digest-token algorithm="SHA-512">
+                     <shared-secret-reference clear-text="${VAULT::vbjgroups::jgroups_password::1}"/>
+                 </digest-token>
+             </auth-protocol>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:jgroups:8.0
+         
+  - name: configure tcp stacks
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:stacks/conf1:stack[@name='tcp']/conf1:protocol[@type='pbcast.STABLE']
+      insertafter: yes
+      input_type: xml
+      add_children:
+             <auth-protocol type="AUTH">
+                <digest-token algorithm="SHA-512">
+                     <shared-secret-reference clear-text="${VAULT::vbjgroups::jgroups_password::1}"/>
+                </digest-token>
+             </auth-protocol>
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:jgroups:8.0
+         
+  - name: configure distributed caches sessions
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='sessions']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+         
+  - name: configure distributed caches authenticationSessions
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='authenticationSessions']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+         
+  - name: configure distributed caches offlineSessions
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='offlineSessions']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+  
+  - name: configure distributed caches clientSessions
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='clientSessions']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+         
+  - name: configure distributed caches offlineClientSessions
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='offlineClientSessions']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+  
+  - name: configure distributed caches loginFailures
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:cache-container[@name='keycloak']/conf1:distributed-cache[@name='loginFailures']
+      attribute: owners
+      value: '2'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:infinispan:12.0
+  
+  - name: configure dblock spi
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem
+      input_type: xml
+      add_children:
+             <spi name="dblock">
+                 <provider name="jpa" enabled="true">
+                     <properties>
+                         <property name="lockWaitTimeout" value="900"/>
+                     </properties>
+                 </provider>
+             </spi>
+      pretty_print: yes
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:keycloak-server:1.1
+         
+  - name: configure admin URL
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:spi[@name='hostname']/conf1:provider[@name='default']/conf1:properties
+      add_children:
+             - property:
+                 name: 'adminUrl'
+                 value: '{{ rhsso_admin_url }}'
+      pretty_print: yes
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:keycloak-server:1.1
+
+  - name: change frontEndURL with external URL name
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:spi[@name='hostname']/conf1:provider[@name='default']/conf1:properties/conf1:property[@name='frontendUrl']
+      attribute: value
+      value: '{{ rhsso_frontend_url }}'
+      pretty_print: yes
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:keycloak-server:1.1
+
+  - name: Add instance id
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem[@*]
+      attribute: instance-id
+      value: '{{ ansible_host }}'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:undertow:12.0
+
+  - name: Tune the worker name - io-threads
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:worker[@name='default']
+      attribute: io-threads
+      value: '500'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:io:3.0
+
+  - name: Tune the worker name - task-max-threads
+    xml:
+      path: "{{ rhsso_jboss_home }}/standalone/configuration/standalone-ha.xml"
+      xpath: /conf:server/conf:profile/conf1:subsystem/conf1:worker[@name='default']
+      attribute: task-max-threads
+      value: '2048'
+      namespaces:
+         conf: urn:jboss:domain:16.0
+         conf1: urn:jboss:domain:io:3.0
+   
+  - name: Create jboss eap management admin user
+    shell: |
+      {{ rhsso_jboss_home }}/bin/add-user.sh eapadmin {{ eap_admin_password }}
+
+  - name: Set the ownership
+    file:
+      path: "{{ rhsso_jboss_home }}"
+      owner: "jboss"
+      group: "jboss"
+      recurse: yes
+    become: yes

@@ -1,0 +1,67 @@
+---
+  - name: Create mysql directory for module
+    file:
+      path: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      state: directory
+      mode: 0755
+      owner: jboss
+      group: jboss
+
+  - name: Create jboss directories
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0755
+      owner: jboss
+      group: jboss
+    with_items:
+      - "/var/log/jboss-eap"
+      - "/var/run/jboss-eap"
+      - "{{ rhsso_jboss_home }}/vault"
+      - "{{ rhsso_jboss_home }}/configuration"
+      - "{{ rhsso_jboss_home }}/standalone/data"
+      - "{{ rhsso_jboss_home }}/standalone/log"
+      - "{{ rhsso_jboss_home }}/standalone/tmp"
+
+  - name: configure limits
+    pam_limits:
+      domain: jboss
+      limit_type: "{{ item.limittype }}"
+      limit_item: "{{ item.limititem }}"
+      value: "{{ item.value }}"
+    with_items:
+      - { limittype: 'hard', limititem: 'nproc', value: 1100 }
+      - { limittype: 'soft', limititem: 'nproc', value: 1024 }
+      - { limittype: 'hard', limititem: 'nofile', value: 16384 }
+      - { limittype: 'soft', limititem: 'nofile', value: 16384 }
+
+  - name: copy mysql module file 
+    template:
+      src: ../files/module.xml
+      dest: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      mode: 0755
+      owner: jboss
+      group: jboss
+
+  - name: "Download the mysql connector package"
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ mysql_connector_package_name }}"
+      dest: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      mode: '0755'
+
+  - name: configure java parameters
+    lineinfile:
+      path: "{{ rhsso_jboss_home }}/bin/standalone.conf"
+      regexp: '^   JAVA_OPTS="-Xms1303m -Xmx1303m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true"'
+      line: '   JAVA_OPTS="-XX:InitialRAMPercentage=50.0 -XX:MaxRAMPercentage=80.0 -Xmx1303m -Xms1303m -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=1024m -Djava.net.preferIPv4Stack=true"'
+
+  - name: configure java parameters 
+    blockinfile:
+      path: "{{ rhsso_jboss_home }}/bin/standalone.conf"
+      insertbefore: "# enable garbage collection logging if not set in environment differently"
+      block: |
+        JAVA_OPTS="$JAVA_OPTS -XX:+UseG1GC"
+        JAVA_OPTS="$JAVA_OPTS -Duser.country=IN -Duser.timezone=Asia/Calcutta"
+        JAVA_OPTS="$JAVA_OPTS -server"
+
+

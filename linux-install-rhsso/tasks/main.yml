@@ -1,0 +1,30 @@
+---
+# tasks file for linux-install-rhsso
+- name: prepare workspace 
+  include_tasks: prepare.yml
+  
+- name: uninstall rhsso
+  include_tasks: uninstall_rhsso.yml
+  
+- name: Install prerequsite
+  include_tasks: install_java_jdk.yml
+
+- name: Install rhsso
+  include_tasks: install_rhsso.yml
+  
+#- name: configure rhsso
+#  include_tasks: configure_rhsso.yml
+
+# - name: Configure rhsso common configuration
+#  include_tasks: configure_rhsso_ha.yml
+
+- name: Configure rhsso ha cluster
+  include_tasks: configure_rhsso_ha.yml
+  when: rhsso_jboss_configfile_path == "standalone-ha.xml"
+  
+- name: configure_rhsso_standalone
+  include_tasks: configure_rhsso_standalone.yml
+  when: rhsso_jboss_configfile_path == "standalone.xml"
+
+- name: Start rhsso
+  include_tasks: start_rhsso.yml

@@ -1,0 +1,12 @@
+---
+  - name: start the Redhat SSO server
+    systemd:
+      state: started
+      name: rhsso.service
+      enabled: true
+    become: true
+
+#  - name: start the Redhat SSO server
+#    shell: |
+#      cd {{ rhsso_jboss_home }}/bin
+#      ./standalone.sh -b 0.0.0.0 & 

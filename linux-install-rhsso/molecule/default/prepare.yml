@@ -1,0 +1,14 @@
+---
+ - name: prepare the workspace
+   hosts: all
+   tasks:
+     - name: Install Python
+       yum:
+         name: "python3-lxml"
+         state: latest
+       become: yes
+       
+     - name: Install unzip
+       yum:
+         name: "unzip"
+         state: latest

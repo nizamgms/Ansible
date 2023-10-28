@@ -1,0 +1,19 @@
+---
+  - name: stop rhsso service
+    systemd:
+      name: rhsso.service
+      state: stopped
+    ignore_errors: yes
+
+#  - name: stop rhsso service
+#    shell: |
+#      cd {{ rhsso_jboss_home }}/bin;
+#      ./jboss-cli.sh --connect --command=:shutdown
+#    ignore_errors: yes
+      
+  - name: Remove the RHSSO value
+    file:
+      path: "{{ rhsso_extract_directory }}/{{ item }}"
+      state: absent
+    with_items:
+      - "rh-sso-{{ rhsso_major_version }}"

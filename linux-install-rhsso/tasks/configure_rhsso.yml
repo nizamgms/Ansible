@@ -1,0 +1,58 @@
+---
+  - name: Create mysql directory
+    file:
+      path: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      state: directory
+      mode: 0755
+      owner: jboss
+      group: jboss
+
+  - name: configure limits
+    pam_limits:
+      domain: jboss
+      limit_type: "{{ item.limittype }}"
+      limit_item: "{{ item.limititem }}"
+      value: "{{ item.value }}"
+    with_items:
+      - { limittype: 'hard', limititem: 'nproc', value: 1100 }
+      - { limittype: 'soft', limititem: 'nproc', value: 1024 }
+      - { limittype: 'hard', limititem: 'nofile', value: 16384 }
+      - { limittype: 'soft', limititem: 'nofile', value: 16384 }
+
+  - name: configure the mysql directory
+    template:
+      src: ../files/module.xml
+      dest: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      mode: 0755
+      owner: jboss
+      group: jboss
+
+  - name: "Download the mysql connector package"
+    get_url:
+      url: "{{ artifactory_baseurl }}/{{ mysql_connector_package_name }}"
+      dest: "{{ rhsso_jboss_home }}/modules/system/layers/base/com/mysql/main"
+      mode: '0755'
+
+#  - name: configure the standalone
+#    template:
+#      src: ../files/standalone.xml
+#      dest: "{{ rhsso_jboss_home }}/standalone/configuration"
+#      mode: 0755
+#      owner: jboss
+#      group: jboss
+#      backup: yes
+#    when: rhsso_jboss_configfile_path == "standalone.xml"
+
+  - name: Create directory
+    file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0755
+      owner: jboss
+      group: jboss
+    with_items:
+      -  "/var/log/jboss-eap"
+      -  "/var/run/jboss-eap"
+    when: rhsso_jboss_configfile_path == "standalone.xml"
+
+
