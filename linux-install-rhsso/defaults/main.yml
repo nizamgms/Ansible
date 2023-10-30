@@ -7,14 +7,11 @@ rhsso_major_version: "7.5"
 rhsso_jboss_home: "{{ rhsso_extract_directory }}/rh-sso-{{ rhsso_major_version }}"
 rhsso_jboss_mode: "standalone"
 #rhsso_jboss_configfile_path: "standalone-ha.xml"
-rhsso_certificate_dn: "CN=rhsso.kppp.karnataka.gov.in,OU=CeG,O=GOK,L=Bengaluru,ST=Karnataka,C=IN"
+rhsso_certificate_dn: "CN=rhsso.nizam.in,OU=CeG,O=NZM,L=Bengaluru,ST=Karnataka,C=IN"
 
-rhsso_jdbc_connection_string: 'jdbc:mysql://172.31.51.200:3306/rh_sso?characterEncoding=UTF-8&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true'
-rhsso_mssql_username: 'rh_sso'
-rhsso_mssql_password: 'Start@123'
 rhsso_min_pool_size: 3
 rhsso_max_pool_size: 100
-rhsso_frontend_url: 'https://kppp.karnataka.gov.in/auth/'
+rhsso_frontend_url: 'https://sso.nizam.in/auth/'
 mysql_connector_package_name: "mysql-connector-java-8.0.18.jar"
 private_server_ip: "192.168.10.2"
 management_server_ip: "192.168.10.1"
@@ -25,6 +22,3 @@ rh_sso_db_password: "Start@123"
 ssl_jks_password: "Start@123"
 ssl_jgroup_auth_password: "Start@123"
 
-mysql_conection_url: 'jdbc:mysql://172.31.51.200:3306/rh_sso?characterEncoding-UTF-8&amp;autoReconnect=true&amp;useSSL=false&amp;alloawPublicKeyRetrieval=true'
-mysql_user_name: "rh_sso"
-rhsso_admin_url: "https://172.31.51.112:8443/auth"
