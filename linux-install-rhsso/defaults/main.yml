@@ -13,8 +13,7 @@ rhsso_min_pool_size: 3
 rhsso_max_pool_size: 100
 rhsso_frontend_url: 'https://sso.nizam.in/auth/'
 mysql_connector_package_name: "mysql-connector-java-8.0.18.jar"
-private_server_ip: "192.168.10.2"
-management_server_ip: "192.168.10.1"
+private_server_ip: "<private_server_ip>"
 
 vault_password: "vaultpass123"
 ssl_ks_password: "certpassword"
