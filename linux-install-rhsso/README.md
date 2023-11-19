@@ -34,6 +34,8 @@ Provide the follwing variables while executing the role
     management_server_ip:
     eap_admin_password:
 
+Run [converge.yml](https://github.com/nizamgms/Ansible/blob/main/linux-install-rhsso/molecule/default/converge.yml) to execute the role.
+
 License
 -------
 
@@ -42,7 +44,7 @@ Copyright © 2022 mdnizam
 Author Information
 ------------------
 
-Name: Nizamuddin M D
-Email: mdnizam.gms@gmail.com
-Designation: Devops Engineer 
+    Name: Nizamuddin M D
+    Email: mdnizam.gms@gmail.com
+    Designation: Devops Engineer 
 
