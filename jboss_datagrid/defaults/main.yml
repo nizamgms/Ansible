@@ -38,15 +38,4 @@ transfer_method: url
 datagrid_cluster_enabled: True
 datagrid_cluster_name: eproc_prod_cluster
 
-#Cluster nodes - each node should have unique name and ip address. This is used for clustering with static list of hosts
-datagrid_cluster_nodes :
- - node: node1
-   ip: 172.31.51.120
- - node: node2
-   ip: 172.31.51.121
-
-# for security reasons use different multicast address and port than the default ip and port.
-datagrid_cluster_jgroup_mcast:
-  addr: 228.6.7.18
-  port: 46656
 
