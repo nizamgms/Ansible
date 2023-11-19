@@ -74,17 +74,6 @@
       - "{{ jboss_home }}"
       - "/var/log/jboss-eap"
 
-  - name: copy the jboss eap script
-    template:
-      src: "../files/jboss-eap.conf"
-      dest: "/etc/default"
-      remote_src: no
-      mode: "755"
-      owner: "root"
-      group: "root"
-    become: yes
-    become_user: root
-
   - name: copy the jboss systemd script
     template:
       src: "../files/rhpam.service"
