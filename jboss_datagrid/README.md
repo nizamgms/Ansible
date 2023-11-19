@@ -1,12 +1,12 @@
-Ansible JBoss Data Grid Role [![Build Status](https://travis-ci.org/dxc/jboss_datagrid.svg)](https://travis-ci.org/dxc/jboss_datagrid)
+Ansible JBoss Data Grid Role
 =================
 
-A role to install JBoss Data Grid on RHEL7. Intended to be used with [JBoss Middleware Playbooks](https://github.com/dxc/ansible-middleware-playbooks)
+A role to install JBoss Data Grid on RHEL7.
 
 Transfer Method
 ------------
 
-This role supports a few different mechanism for transferring the product zip files to the target host. These are documented on [the main playbooks README](https://github.com/dxc/ansible-middleware-playbooks), as the methods are supported across a variety of roles.
+This role supports a few different mechanism for transferring the product zip files to the target host.
 
 
 Dependencies
@@ -15,22 +15,12 @@ Dependencies
 - java
 - unzip
 
-Our playbooks provide these dependencies in a [common role](https://github.com/dxc/ansible-role-jboss-common), but this there is no explicitly ansible dependency to allow end users more options.
+Our playbooks provide these dependencies but there is no explicitly ansible dependency to allow end users more options.
 
-Example Playbooks
-----------------
-
-- [JBoss Data Grid 6.6.0 on RHEL 7](https://github.com/dxc/ansible-middleware-playbooks/blob/master/jdg-6.6.0-rhel7.yml)
-
-License
--------
-
-[LICENSE](./LICENSE)
 
 Authors Information
 ------------------
 
-* [Andrew Block](https://github.com/sabre1041)
-* [Albert Wong](https://github.com/alberttwong)
-* [Justin Holmes](https://github.com/sherl0cks)
-* [Kamesh Sampath](https://github.com/kameshsampath)
+    Name: Nizamuddin M D
+    Email: mdnizam.gms@gmail.com
+    Designation: Devops Engineer 
