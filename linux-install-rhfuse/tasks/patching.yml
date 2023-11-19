@@ -9,6 +9,7 @@
       url: "{{ artifactory_baseurl }}/jboss/{{ jboss_patch_package_name }}"
       dest: "{{ patch_download_directory }}/{{ jboss_patch_package_name }}"
       mode: '0755'
+      
   - name: Enable systemd service
     systemd:
       name: rhfuse.service
@@ -20,6 +21,7 @@
     become_user: jboss
     vars:
       cmd: "patch apply {{ patch_download_directory }}/{{ jboss_patch_package_name }} --override-all"
+      
   - name: Delete the installer file
     file:
       path: "{{ item }}"
