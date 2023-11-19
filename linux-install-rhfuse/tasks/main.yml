@@ -13,7 +13,6 @@
 
 - name: Install RH fuse
   include_tasks: install_rhfuse.yml
-#  when: execute_action == "install"
   
 - name: configure rhfuse
   include_tasks: configure_rhfuse_ha.yml
