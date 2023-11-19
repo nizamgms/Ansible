@@ -11,7 +11,7 @@ rhfuse_jboss_home: "{{ extract_directory }}/jboss-eap-{{ jboss_eap_major_version
 jboss_patch_package_name: "jboss-eap-7.4.1-patch.zip"
 patch_download_directory: "/tmp/patch/"
 execute_action: "install"
-rhfuse_certificate_dn: "CN=rhsso.kppp.karnataka.gov.in,OU=CeG,O=GOK,L=Bengaluru,ST=Karnataka,C=IN"
+rhfuse_certificate_dn: "CN=rhsso.nizam.in,O=NZM,L=Bengaluru,ST=Karnataka,C=IN"
 
 vault_password: "vaultpass123"
 ssl_ks_password: "certpassword"
