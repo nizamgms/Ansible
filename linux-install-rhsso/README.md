@@ -1,38 +1,47 @@
-Role Name
+Linux-install-rhsso
 =========
 
-A brief description of the role goes here.
+A role to install Red-Hat single sign on(RHSSO) and configure it.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+ - Make sure **mysql** is installed and running, create a user refer [main.yml](https://github.com/nizamgms/Ansible/blob/main/linux-install-rhsso/defaults/main.yml) for mysql username and password
+ - Create a database with the name **rh_sso**
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+To change any default variable like artifactory_baseurl, Artifact version and so on go to [Defaults/main.yml](https://github.com/nizamgms/Ansible/blob/main/linux-install-rhsso/defaults/main.yml).
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+- java
+- python3-lxml
+- unzip
 
-Example Playbook
+Our playbooks provide these dependencies, but this there is no explicitly ansible dependency to allow end users more options.
+
+Executing Playbooks
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+Provide the follwing variables while executing the role
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+    rhsso_jboss_configfile_path: ("standalone-ha.xml" for clustered and "standalone.xml" for non-clustered)
+    node2_ip_address:
+    node1_ip_address:
+    management_server_ip:
+    eap_admin_password:
 
 License
 -------
 
-BSD
+Copyright © 2022 mdnizam
 
 Author Information
 ------------------
+Name: Nizamuddin M D
+Email: mdnizam.gms@gmail.com
+Designation: Devops Engineer 
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
