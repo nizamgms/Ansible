@@ -27,7 +27,7 @@ Provide the below listed variables while executing the role
     node1_ip_address:
     management_server_ip:
 
-Run [molecule/default/converge.yml](   
+Run [molecule/default/converge.yml](https://github.com/nizamgms/Ansible/blob/main/linux-install-rhpam/molecule/default/converge.yaml)
 
 License
 -------
