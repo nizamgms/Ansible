@@ -1,7 +1,0 @@
----
-- name: Converge
-  hosts: "{{ ansible_target_host }}"
-  tasks:
-    - name: JBoss Datagrid Role
-      include_role:
-        name: "../../../"

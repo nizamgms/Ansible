@@ -1,6 +1,0 @@
----
-
-# Add authentication mechanisms to the connectors
-
-- name: Secure Hot Hod with  SASL auth mechanisms
-  
